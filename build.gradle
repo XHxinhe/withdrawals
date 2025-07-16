@@ -1,0 +1,82 @@
+plugins {
+    id 'fabric-loom' version '1.6.10'
+    id 'maven-publish'
+}
+ext {
+    mod_id = project.findProperty('mod_id') ?: "default_mod_id"
+    mod_name = project.findProperty('mod_name') ?: "Default Mod Name"
+    mod_description = project.findProperty('mod_description') ?: "Default description"
+    mod_license = project.findProperty('mod_license') ?: "MIT"  // 添加许可证
+    version = project.findProperty('version') ?: "1.0.0"
+    mod_authors = project.findProperty('mod_authors') ?: "Your Name"
+    mod_homepage = project.findProperty('mod_homepage') ?: "https://example.com"
+    mod_sources = project.findProperty('mod_sources') ?: "https://github.com/your/repo"
+    loader_version_range = project.findProperty('loader_version_range') ?: ">=0.14.21"
+    minecraft_version_range = project.findProperty('minecraft_version_range') ?: "~1.20.1"
+    java_version_range = project.findProperty('java_version_range') ?: ">=17"
+    jei_version = project.findProperty('jei_version') ?: ">=17.3.0"
+    fabric_version_range = project.findProperty('fabric_version_range') ?: ">=0.92.0"
+}
+
+
+version = project.mod_version
+group = project.maven_group
+
+repositories {
+    // 删除 Ladysnake 仓库配置
+    maven {
+        name = 'Fabric'
+        url = 'https://maven.fabricmc.net/'
+    }
+    maven {
+        name = 'Quilt'
+        url = 'https://maven.quiltmc.org/repository/release'
+    }
+    mavenCentral()
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:0.92.0+1.20.1"
+    modImplementation "net.fabricmc:fabric-loader:0.15.7"
+
+    modImplementation files(
+            "libs/cardinal-components-base-5.2.2.jar",
+            "libs/cardinal-components-block-5.2.2.jar",
+            "libs/cardinal-components-chunk-5.2.2.jar",
+            "libs/cardinal-components-entity-5.2.2.jar",
+            "libs/cardinal-components-item-5.2.2.jar",
+            "libs/cardinal-components-level-5.2.2.jar",
+            "libs/cardinal-components-scoreboard-5.2.2.jar",
+            "libs/cardinal-components-world-5.2.2.jar"
+    )
+    include files(
+            "libs/cardinal-components-base-5.2.2.jar",
+            "libs/cardinal-components-block-5.2.2.jar",
+            "libs/cardinal-components-chunk-5.2.2.jar",
+            "libs/cardinal-components-entity-5.2.2.jar",
+            "libs/cardinal-components-item-5.2.2.jar",
+            "libs/cardinal-components-level-5.2.2.jar",
+            "libs/cardinal-components-scoreboard-5.2.2.jar",
+            "libs/cardinal-components-world-5.2.2.jar"
+    )
+}
+
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = "UTF-8"
+    it.options.release = 17
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+    withSourcesJar()
+}
+
+jar {
+    from("LICENSE") {
+        rename { "${it}_${project.archivesBaseName}"}
+    }
+}
