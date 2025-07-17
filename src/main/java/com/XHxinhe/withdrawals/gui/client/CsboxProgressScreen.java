@@ -5,7 +5,7 @@ import com.XHxinhe.withdrawals.component.ModComponents;
 import com.XHxinhe.withdrawals.item.ItemCsgoBox;
 import com.XHxinhe.withdrawals.packet.ModPackets;
 import com.XHxinhe.withdrawals.packet.PacketGiveItem;
-import com.XHxinhe.withdrawals.screen.CsboxScreenHandler; // 确保这个类存在
+import com.XHxinhe.withdrawals.screen.CsboxScreenHandler;
 import com.XHxinhe.withdrawals.sounds.ModSounds;
 import com.XHxinhe.withdrawals.util.*;
 import net.fabricmc.api.EnvType;
@@ -16,6 +16,7 @@ import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
+import net.minecraft.registry.Registries; // 导入 Registries
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.text.Text;
 import net.minecraft.util.Hand;
@@ -50,9 +51,8 @@ public class CsboxProgressScreen extends HandledScreen<CsboxScreenHandler> {
     private List<Float> renderExport;
     private int openTime;
 
-    // 构造函数 - 移除了错误的代码
     public CsboxProgressScreen(CsboxScreenHandler handler, PlayerInventory inventory, Text title) {
-        super(handler, inventory, Text.empty()); // 传入空标题，避免显示默认标题
+        super(handler, inventory, Text.empty());
         this.entity = inventory.player;
         this.world = entity.getWorld();
         this.boxStack = this.entity.getStackInHand(Hand.MAIN_HAND);
@@ -65,29 +65,24 @@ public class CsboxProgressScreen extends HandledScreen<CsboxScreenHandler> {
 
         if (this.itemList == null) this.itemList = new HashMap<>();
         this.velocityExport = renderCount();
-
-        // 将玩家物品栏标题移出屏幕，使其不可见
         this.playerInventoryTitleY = 1000;
     }
 
     @Override
     protected void init() {
         super.init();
-        this.titleX = 1000; // 将主标题移出屏幕
+        this.titleX = 1000;
         this.startWidth = this.width;
         BlurHandler.updateShaderState(true);
     }
 
-    // 我们自己绘制所有东西，所以这个方法留空，避免绘制默认标题
     @Override
     protected void drawForeground(DrawContext context, int mouseX, int mouseY) {
-        // 不调用 super.drawForeground(...)
+        // 空
     }
 
-    // 这个方法现在只负责绘制我们的自定义背景
     @Override
     protected void drawBackground(DrawContext context, float delta, int mouseX, int mouseY) {
-        // 绘制我们的自定义背景（模糊效果）
         if (this.client != null && this.client.world != null) {
             context.fillGradient(0, 0, this.width, this.height, BlurHandler.getBackgroundColor(), BlurHandler.getBackgroundColor());
         }
@@ -95,7 +90,6 @@ public class CsboxProgressScreen extends HandledScreen<CsboxScreenHandler> {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        // 1. 执行Tick逻辑
         if (this.client != null && this.client.player != null) {
             if (this.client.player.isAlive() && !this.client.player.isRemoved()) {
                 this.containerTick();
@@ -104,16 +98,14 @@ public class CsboxProgressScreen extends HandledScreen<CsboxScreenHandler> {
             }
         } else {
             this.close();
-            return; // 如果客户端为空，则提前返回
+            return;
         }
 
-        // 2. 绘制我们的自定义背景
         this.drawBackground(context, delta, mouseX, mouseY);
+        if (this.client != null) {
+            this.client.options.hudHidden = true;
+        }
 
-        // 3. 隐藏原版HUD
-        this.client.options.hudHidden = true;
-
-        // 4. 绘制动画
         RenderSystem.setShaderColor(1, 1, 1, 1);
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
@@ -143,33 +135,50 @@ public class CsboxProgressScreen extends HandledScreen<CsboxScreenHandler> {
         }
 
         RenderSystem.disableBlend();
-
-        // 绘制覆盖的纹理
         RenderSystem.enableBlend();
         context.drawTexture(new Identifier("withdrawals", "textures/screens/csgo_background.png"), 0, 0, 0, 0, this.width, this.height, this.width, this.height);
         RenderSystem.disableBlend();
 
-        // 5. 调用 super.render() 来绘制物品栏格子和工具提示
-        // 注意：我们已经通过重写 drawBackground 和 drawForeground 禁用了背景和标题的绘制
-        // 所以这里的 super.render() 只会绘制物品栏本身和处理鼠标悬停。
-//        super.render(context, mouseX, mouseY, delta);
-
-        // 6. 绘制工具提示（这确保了悬停在物品上时能看到信息）
         this.drawMouseoverTooltip(context, mouseX, mouseY);
     }
 
+    /**
+     * --- 这是核心修改 ---
+     * 生成50个随机物品用于动画展示。
+     * 通过对物品列表进行排序，确保客户端和服务器使用相同种子时，生成的物品序列完全一致。
+     */
     public void renderGradeItems() {
         seedBlender.setSeed(System.nanoTime());
         seed = seedBlender.nextLong();
         Random rng = new Random(seed);
 
-        // 清空旧数据
         gradeInput.clear();
         itemInput.clear();
 
+        // --- 关键修改开始 ---
+        // 1. 将原始的 itemList (HashMap) 的条目放入一个 List 中，以便排序。
+        List<Map.Entry<ItemStack, Integer>> sortedEntries = new ArrayList<>(this.itemList.entrySet());
+
+        // 2. 对 List 进行排序。我们使用物品的注册表ID作为排序依据，
+        //    这是一个稳定且唯一的标识符 (例如 "minecraft:diamond_sword")。
+        //    这确保了无论在客户端还是服务器，物品的顺序都是固定的。
+        sortedEntries.sort(Comparator.comparing(entry ->
+                Registries.ITEM.getId(entry.getKey().getItem()).toString()
+        ));
+
+        // 3. 创建一个新的 LinkedHashMap 来保持排序后的顺序。
+        //    虽然你的 RandomItem 工具类可能不直接利用这个顺序，但这是最佳实践。
+        //    我们将把这个排好序的列表传递给随机选择逻辑。
+        Map<ItemStack, Integer> sortedItemList = new LinkedHashMap<>();
+        for (Map.Entry<ItemStack, Integer> entry : sortedEntries) {
+            sortedItemList.put(entry.getKey(), entry.getValue());
+        }
+        // --- 关键修改结束 ---
+
         for (int i = 0; i < 50; i++) {
             int grade = RandomItem.randomItemsGrade(rng, ItemCsgoBox.getRandom(boxStack), this.entity);
-            ItemStack itemStack = RandomItem.randomItems(rng, grade, this.itemList);
+            // 使用排好序的 sortedItemList 来选择物品
+            ItemStack itemStack = RandomItem.randomItems(rng, grade, sortedItemList);
             gradeInput.add(grade);
             itemInput.add(itemStack);
         }
@@ -188,9 +197,9 @@ public class CsboxProgressScreen extends HandledScreen<CsboxScreenHandler> {
             startSwitch = false;
             this.renderExport = renderMove(this.velocityExport);
 
+            // 将种子发送给服务器，服务器会用同样的逻辑生成物品列表
             ClientPlayNetworking.send(ModPackets.GIVE_ITEM_ID, new PacketGiveItem(seed).toBuf());
 
-            // 确保列表不为空
             if (itemInput.size() > 45 && gradeInput.size() > 45) {
                 ModComponents.CSBOX_COMPONENT.maybeGet(this.entity).ifPresent(csbox -> {
                     csbox.setItem(itemInput.get(45));

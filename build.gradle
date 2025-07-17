@@ -23,7 +23,6 @@ version = project.mod_version
 group = project.maven_group
 
 repositories {
-    // 删除 Ladysnake 仓库配置
     maven {
         name = 'Fabric'
         url = 'https://maven.fabricmc.net/'
@@ -42,6 +41,7 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:0.15.7"
 
     modImplementation files(
+            "libs/AliveAndWell-mc1.20.1-fabric-4.1.3.jar",
             "libs/cardinal-components-base-5.2.2.jar",
             "libs/cardinal-components-block-5.2.2.jar",
             "libs/cardinal-components-chunk-5.2.2.jar",
@@ -49,7 +49,7 @@ dependencies {
             "libs/cardinal-components-item-5.2.2.jar",
             "libs/cardinal-components-level-5.2.2.jar",
             "libs/cardinal-components-scoreboard-5.2.2.jar",
-            "libs/cardinal-components-world-5.2.2.jar"
+            "libs/cardinal-components-world-5.2.2.jar",
     )
     include files(
             "libs/cardinal-components-base-5.2.2.jar",

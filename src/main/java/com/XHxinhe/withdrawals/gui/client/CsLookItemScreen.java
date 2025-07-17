@@ -98,7 +98,7 @@ public class CsLookItemScreen extends Screen {
         context.fill(this.width * 25 / 100, this.height * 92 / 100, this.width * 75 / 100, this.height * 92 / 100 + 1, 0xFFD3D3D3);
         context.fill(this.width * 37 / 100, this.height * 16 / 100, this.width * 63 / 100, this.height * 16 / 100 + 2, ColorTools.colorItems(grade));
 
-        GuiItemMove.renderItemInInventoryFollowsMouse(context, this.width * 37 / 100, this.height * 30 / 100, this.itemRotX, this.itemRotY, openItem, this.entity, scale);
+        GuiItemMove.renderItemInInventoryFollowsMouse(context, this.width * 50 / 100, this.height * 50 / 100, this.itemRotX, this.itemRotY, openItem, this.entity, scale);
         RenderSystem.disableBlend();
     }
 
@@ -189,7 +189,6 @@ public class CsLookItemScreen extends Screen {
         if (this.client != null) {
             this.client.options.hudHidden = false;
             if (this.client.player != null) {
-                // closeHandledScreen() 应该在 super.close() 之前调用，以避免潜在问题
                 this.client.player.closeHandledScreen();
             }
         }

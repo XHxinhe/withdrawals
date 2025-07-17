@@ -94,11 +94,11 @@ public class ItemCsgoBox extends Item {
     }
     public static int[] getRandom(ItemStack stack) {
         BoxInfo info = getBoxInfo(stack);
-        if (info != null && info.boxRandom != null && info.boxRandom.length > 0) {
+        if (info != null && info.boxRandom != null && info.boxRandom.length == 5) { // 确保数组长度正确
             return info.boxRandom;
         }
-        // 如果没有设置随机概率,返回默认值
-        return new int[]{40, 30, 20, 9, 1}; // 默认概率分布
+        // [修正] 返回正确顺序的默认权重：[金, 红, 粉, 紫, 蓝]
+        return new int[]{1, 9, 20, 30, 40};
     }
     public static Map<ItemStack, Integer> getItemGroup(ItemStack stack) {
         Map<ItemStack, Integer> itemsMap = new LinkedHashMap<>();
