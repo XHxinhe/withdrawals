@@ -1,5 +1,6 @@
 package com.XHxinhe.withdrawals.gui.client;
 
+import com.XHxinhe.withdrawals.gui.widget.TexturedButtonWithText;
 import com.XHxinhe.withdrawals.util.IconListTools;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.XHxinhe.withdrawals.item.ItemCsgoBox;
@@ -13,7 +14,6 @@ import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.TexturedButtonWidget;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.PacketByteBuf;
@@ -80,27 +80,32 @@ public class CsboxScreen extends Screen {
     @Override
     protected void init() {
         super.init();
-        // 在GUI初始化时开启模糊效果
-        BlurHandler.updateShaderState(true);
+        BlurHandler.enable(true);
 
         // 开箱按钮
-        this.addDrawableChild(new TexturedButtonWidget(
-                this.width * 67 / 100, this.height * 94 / 100,
+        this.addDrawableChild(new TexturedButtonWithText(
+                this.width * 68 / 100, this.height * 94 / 100,
                 this.width * 4 / 100, this.height * 5 / 100,
                 0, 0, 64,
                 new Identifier("withdrawals", "textures/screens/atlas/open_box.png"),
                 82, 128,
-                button -> openBox()
+                button -> openBox(),
+                Text.translatable("gui.withdrawals.csgo_box.open_box"),
+                this.textRenderer,
+                0.8f
         ));
 
         // 返回按钮
-        this.addDrawableChild(new TexturedButtonWidget(
-                this.width * 72 / 100, this.height * 94 / 100,
+        this.addDrawableChild(new TexturedButtonWithText(
+                this.width * 73 / 100, this.height * 94 / 100,
                 this.width * 4 / 100, this.height * 5 / 100,
                 0, 0, 64,
                 new Identifier("withdrawals", "textures/screens/atlas/back_box.png"),
                 82, 128,
-                button -> closeScreen()
+                button -> closeScreen(),
+                Text.translatable("gui.withdrawals.csgo_box.back_box"),
+                this.textRenderer,
+                0.8f
         ));
     }
 
@@ -111,17 +116,28 @@ public class CsboxScreen extends Screen {
         boolean needsKey = keyId != null && !keyId.isEmpty();
 
         if (itemMenu.getItem() instanceof ItemCsgoBox && (!needsKey || hasKey(keyId))) {
-            this.client.setScreen(new CsboxProgressScreen());
+            // 【关键修改】: 不再直接创建屏幕，而是发送一个数据包到服务器，请求打开GUI
+            // 服务器收到这个包后，会打开一个ScreenHandler，然后客户端会自动打开对应的CsboxProgressScreen
+            PacketByteBuf buf = PacketByteBufs.create();
+            // 这里可以发送一些需要的信息，如果不需要额外信息，发送一个空包即可
+            // 比如，我们可以发送一个整数来表示操作类型
+            buf.writeInt(1); // 1 代表请求开箱
+            ClientPlayNetworking.send(ModPackets.CSGO_PROGRESS_ID, buf);
+
+            // 如果需要消耗钥匙，消耗钥匙的逻辑应该在服务器端处理，
+            // 但我们可以在客户端先发送消耗钥匙的请求。
+            // 您原来的代码已经有这个逻辑了，我们把它保留。
             if (needsKey) {
-                PacketByteBuf buf = PacketByteBufs.create();
-                buf.writeInt(2);
-                buf.writeString(keyId);
-                ClientPlayNetworking.send(ModPackets.CSGO_PROGRESS_ID, buf);
+                PacketByteBuf keyBuf = PacketByteBufs.create();
+                keyBuf.writeInt(2); // 2 代表消耗钥匙
+                keyBuf.writeString(keyId);
+                ClientPlayNetworking.send(ModPackets.CSGO_PROGRESS_ID, keyBuf);
             }
         }
     }
 
     private boolean hasKey(String keyId) {
+        if (this.entity == null) return false;
         for (ItemStack stack : this.entity.getInventory().main) {
             Identifier stackId = Registries.ITEM.getId(stack.getItem());
             if (stackId.toString().equals(keyId)) {
@@ -155,7 +171,7 @@ public class CsboxScreen extends Screen {
 
         // 渲染箱子物品（支持旋转）
         float scale = (width * 26F / 100F) / 16F;
-        GuiItemMove.renderItemInInventoryFollowsMouse(context, this.width * 37 / 100, this.height * 12 / 100, this.itemRotX, this.itemRotY, itemMenu, this.entity, scale);
+        GuiItemMove.renderItemInInventoryFollowsMouse(context, this.width * 50 / 100, this.height * 32 / 100, this.itemRotX, this.itemRotY, itemMenu, this.entity, scale);
 
         // 渲染物品列表
         int x = 0, y = 0;
@@ -183,38 +199,66 @@ public class CsboxScreen extends Screen {
     protected void renderLabels(DrawContext context, int mouseX, int mouseY) {
         Style boldStyle = Style.EMPTY.withBold(true);
 
-        // 标题和标签
-        renderText(context, Text.translatable("gui.withdrawals.csgo_box.title").fillStyle(boldStyle), middleOf(Text.translatable("gui.withdrawals.csgo_box.title").getString(), 2), this.height * 5.9F / 100F, 2F);
-        renderText(context, Text.translatable("gui.withdrawals.csgo_box.label_box"), this.width * 46F / 100F, this.height * 13F / 100F, 0.8F);
-        renderText(context, itemMenu.getName(), this.width * 50F / 100F, this.height * 13F / 100F, 0.8F);
+        renderTitleSection(context, boldStyle);
+        renderItemListSection(context, boldStyle);
+        renderBottomSection(context, boldStyle);
+    }
 
-        // 物品名称标签
-        int x = 0, y = 0;
+    private void renderTitleSection(DrawContext context, Style boldStyle) {
+        Style colorStyle = Style.EMPTY.withColor(0xFFFFFF00);
+        Text titleText = Text.translatable("gui.withdrawals.csgo_box.title").fillStyle(boldStyle).fillStyle(colorStyle);
+        renderText(context, titleText, middleOf(titleText.getString(), 1.5F), this.height * 5.9F / 100F, 1.5F);
+
+        Text labelText = Text.translatable("gui.withdrawals.csgo_box.label_box");
+        Text boxNameText = itemMenu.getName();
+        float labelWidth = this.textRenderer.getWidth(labelText) * 0.7F;
+        float boxNameWidth = this.textRenderer.getWidth(boxNameText) * 0.7F;
+        float totalWidth = labelWidth + boxNameWidth + 5;
+        float startX = (this.width - totalWidth) / 2;
+
+        renderText(context, labelText, startX, this.height * 13F / 100F, 0.7F);
+        renderText(context, boxNameText, startX + labelWidth + 5, this.height * 13F / 100F, 0.7F);
+    }
+
+    private void renderItemListSection(DrawContext context, Style boldStyle) {
+        renderText(context, Text.translatable("gui.withdrawals.csgo_box.label_items").fillStyle(boldStyle), this.width * 3F / 100F, this.height * 50.3F / 100F, 0.8F);
+
+        int lastRenderedPx = 0;
+        int lastRenderedPy = 0;
         for (int i = 0; i < itemsList.size(); i++) {
             int py = 67, px = i;
             if (i > 9) { py = 85; px = i - 10; }
-            int grade = gradeList.get(i);
-            x = px; y = py;
-            if (grade > 4) break;
-            renderText(context, itemsList.get(i).getName(), this.width * 4F / 100 + px * this.width * 9F / 100, this.height * py / 100F, 0.6F);
-        }
-        renderText(context, Text.translatable("gui.withdrawals.csgo_box.label_gold"), this.width * 4F / 100 + x * this.width * 9F / 100, this.height * y / 100F, 0.6F);
-        renderText(context, Text.translatable("gui.withdrawals.csgo_box.label_items").fillStyle(boldStyle), this.width * 3F / 100F, this.height * 50.3F / 100F, 0.8F);
 
-        // 钥匙数量显示
+            int grade = gradeList.get(i);
+            if (grade > 4) {
+                lastRenderedPx = px;
+                lastRenderedPy = py;
+                break;
+            }
+            renderText(context, itemsList.get(i).getName(), this.width * 4F / 100 + px * this.width * 9F / 100, this.height * py / 100F, 0.6F);
+            lastRenderedPx = px;
+            lastRenderedPy = py;
+        }
+
+        if (!gradeList.isEmpty() && gradeList.get(gradeList.size() - 1) == 5) {
+            renderText(context, Text.translatable("gui.withdrawals.csgo_box.label_gold"), this.width * 4F / 100 + lastRenderedPx * this.width * 9F / 100, this.height * lastRenderedPy / 100F, 0.6F);
+        }
+    }
+
+    private void renderBottomSection(DrawContext context, Style boldStyle) {
+        float iconX = this.width * 25F / 100F;
+        float iconY = this.height * 93F / 100F;
+        float textX = iconX + 20;
+        float textY = iconY + 5;
+
         if (!itemKey.isEmpty()) {
             if (boxKeyCount > 0) {
-                renderText(context, Text.literal(" × " + boxKeyCount), this.width * 28F / 100F, this.height * 94F / 100F, 0.8F);
+                renderText(context, Text.literal(" × " + boxKeyCount), textX - 5, textY, 0.8F);
             } else {
-                renderText(context, Text.translatable("gui.withdrawals.csgo_box.label_open"), this.width * 28F / 100F, this.height * 94F / 100F, 0.8F);
-                renderText(context, itemKey.getName(), this.width * 35F / 100F, this.height * 94F / 100F, 0.8F);
-                renderText(context, Text.translatable("gui.withdrawals.csgo_box.label_open_1"), this.width * 40F / 100F, this.height * 94F / 100F, 0.8F);
+                String tip = "需要使用 1个 " + itemKey.getName().getString() + " 打开 ";
+                renderText(context, Text.literal(tip), textX, textY, 0.8F);
             }
         }
-
-        // 按钮文字
-        renderText(context, Text.translatable("gui.withdrawals.csgo_box.open_box").fillStyle(boldStyle), (float) this.width * 67.5F / 100F, (float) this.height * 95 / 100, 0.8F);
-        renderText(context, Text.translatable("gui.withdrawals.csgo_box.back_box").fillStyle(boldStyle), (float) this.width * 72.5F / 100F, (float) this.height * 95 / 100, 0.8F);
     }
 
     @Override
@@ -242,7 +286,7 @@ public class CsboxScreen extends Screen {
 
     private int getKeyCount() {
         String keyId = ItemCsgoBox.getKey(itemMenu);
-        if (keyId == null || keyId.isEmpty()) return 0;
+        if (keyId == null || keyId.isEmpty() || this.entity == null) return 0;
         int count = 0;
         for (ItemStack stack : entity.getInventory().main) {
             Identifier stackId = Registries.ITEM.getId(stack.getItem());
@@ -282,8 +326,7 @@ public class CsboxScreen extends Screen {
 
     @Override
     public void close() {
-        // 关闭时禁用模糊效果
-        BlurHandler.updateShaderState(false);
+        BlurHandler.enable(false);
         if (this.client != null) {
             this.client.options.hudHidden = false;
         }
@@ -299,9 +342,6 @@ public class CsboxScreen extends Screen {
         return (this.width - this.textRenderer.getWidth(text) * scale) * 0.5F;
     }
 
-    /**
-     * 使用DrawContext的矩阵变换渲染缩放文本
-     */
     private void renderText(DrawContext context, Text text, float px, float py, float scale) {
         context.getMatrices().push();
         context.getMatrices().translate(px, py, 0);

@@ -1,5 +1,6 @@
 package com.XHxinhe.withdrawals.gui.client;
 
+import com.XHxinhe.withdrawals.gui.widget.TexturedButtonWithText;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.XHxinhe.withdrawals.component.ModComponents;
 import com.XHxinhe.withdrawals.sounds.ModSounds;
@@ -49,16 +50,21 @@ public class CsLookItemScreen extends Screen {
     @Override
     protected void init() {
         super.init();
-        // [新增] 在GUI初始化时开启模糊效果
-        BlurHandler.updateShaderState(true);
+        BlurHandler.enable(true);
 
-        this.addDrawableChild(new TexturedButtonWidget(
-                this.width * 72 / 100, this.height * 94 / 100,
-                this.width * 4 / 100, this.height * 5 / 100,
+        // 使用TexturedButtonWithText来添加带文字的返回按钮
+        this.addDrawableChild(new TexturedButtonWithText(
+                this.width * 72 / 100,      // X位置
+                this.height * 94 / 100,     // Y位置
+                this.width * 4 / 100,       // 宽度
+                this.height * 5 / 100,      // 高度
                 0, 0, 64,
                 new Identifier("withdrawals", "textures/screens/atlas/back_box.png"),
                 82, 128,
-                button -> this.close() // [修正] 直接调用 close() 以确保清理逻辑执行
+                button -> this.close(),
+                Text.translatable("gui.withdrawals.csgo_box.back_box"), // 按钮文本
+                this.textRenderer,
+                0.8f  // 文字缩放
         ));
     }
 
@@ -179,7 +185,7 @@ public class CsLookItemScreen extends Screen {
     @Override
     public void close() {
         // [修正] 调用正确的方法名，并且在关闭时禁用模糊
-        BlurHandler.updateShaderState(false);
+        BlurHandler.enable(false);
         if (this.client != null) {
             this.client.options.hudHidden = false;
             if (this.client.player != null) {

@@ -13,8 +13,6 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.screen.ingame.HandledScreens;
-import net.minecraft.entity.player.PlayerInventory; // 新增：解决 'PlayerInventory' 无法解析
-import net.minecraft.text.Text; // 新增：解决 'Text' 无法解析
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +31,7 @@ public class Withdrawals implements ModInitializer, ClientModInitializer {
 
     public static final String MODID = "withdrawals";
     public static final Logger LOGGER = LoggerFactory.getLogger(MODID);
+
 
     @Override
     public void onInitialize() {
@@ -54,12 +53,9 @@ public class Withdrawals implements ModInitializer, ClientModInitializer {
     public void onInitializeClient() {
         LOGGER.info("《提款》Mod 正在进行客户端初始化...");
 
-        // 注册GUI屏幕，为lambda表达式的参数显式声明类型，解决所有编译问题。
-        HandledScreens.register(ModScreenHandlers.CSGO_SCREEN_HANDLER, (CsboxScreenHandler handler, PlayerInventory inventory, Text title) -> {
-            CsboxProgressScreen screen = new CsboxProgressScreen();
-            screen.setHandler(handler);
-            return screen;
-        });
+        // 注册GUI屏幕，使用正确的方式来实例化 CsboxProgressScreen
+        // CsboxProgressScreen::new 是 (handler, inventory, title) -> new CsboxProgressScreen(handler, inventory, title) 的简写
+        HandledScreens.register(ModScreenHandlers.CSGO_SCREEN_HANDLER, CsboxProgressScreen::new);
 
         ModPackets.registerS2CPackets();
         BlurHandler.register();
@@ -91,7 +87,8 @@ public class Withdrawals implements ModInitializer, ClientModInitializer {
                           "grade3": ["{\\"id\\":\\"minecraft:diamond_shovel\\",\\"Count\\":1,\\"tag\\":{\\"Damage\\":0}}", "{\\"id\\":\\"minecraft:diamond_pickaxe\\",\\"Count\\":1,\\"tag\\":{\\"Damage\\":0}}", "{\\"id\\":\\"minecraft:diamond_hoe\\",\\"Count\\":1,\\"tag\\":{\\"Damage\\":0}}"],
                           "grade4": ["{\\"id\\":\\"minecraft:diamond_axe\\",\\"Count\\":1,\\"tag\\":{\\"Damage\\":0}}", "{\\"id\\":\\"minecraft:diamond_sword\\",\\"Count\\":1,\\"tag\\":{\\"Damage\\":0}}"],
                           "grade5": ["{\\"id\\":\\"minecraft:netherite_sword\\",\\"Count\\":1,\\"tag\\":{\\"Damage\\":0}}", "{\\"id\\":\\"minecraft:netherite_axe\\",\\"Count\\":1,\\"tag\\":{\\"Damage\\":0}}", "{\\"id\\":\\"minecraft:netherite_pickaxe\\",\\"Count\\":1,\\"tag\\":{\\"Damage\\":0}}", "{\\"id\\":\\"minecraft:netherite_shovel\\",\\"Count\\":1,\\"tag\\":{\\"Damage\\":0}}", "{\\"id\\":\\"minecraft:netherite_hoe\\",\\"Count\\":1,\\"tag\\":{\\"Damage\\":0}}"]
-                        }""";
+                        }
+                        """;
                 try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(filePath.toFile()), StandardCharsets.UTF_8))) {
                     writer.write(content);
                 }
