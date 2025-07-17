@@ -2,9 +2,12 @@ package com.XHxinhe.withdrawals.item;
 
 import com.google.common.collect.Lists;
 import com.google.gson.annotations.SerializedName;
-import com.XHxinhe.withdrawals.gui.CsboxScreenHandler; // 导入 ScreenHandler
+import com.XHxinhe.withdrawals.gui.client.CsboxScreen;
 import com.XHxinhe.withdrawals.util.ItemNbtUtil;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.item.v1.FabricItemSettings;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.item.TooltipContext;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
@@ -38,18 +41,17 @@ public class ItemCsgoBox extends Item {
     public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
         ItemStack stack = user.getStackInHand(hand);
 
-        // 核心修改：只在服务器端执行打开屏幕的操作
-        if (!world.isClient) {
-            // 使用在 CsboxScreenHandler 中定义的工厂方法来创建并打开屏幕
-            // 这样可以将箱子的数据安全地传递给服务器，再由服务器同步给客户端
-            user.openHandledScreen(CsboxScreenHandler.createFactory(stack));
+        if (world.isClient) {
+            openCsgoScreen(stack);
         }
 
-        // 无论客户端还是服务器，都返回成功，以播放手臂挥动动画
-        return TypedActionResult.success(stack, world.isClient());
+        return TypedActionResult.consume(stack);
     }
 
-    // 不再需要 openCsgoScreen 方法，已移除
+    @Environment(EnvType.CLIENT)
+    private void openCsgoScreen(ItemStack stack) {
+        MinecraftClient.getInstance().setScreen(new CsboxScreen(stack));
+    }
 
     @Override
     public Text getName(ItemStack stack) {
@@ -90,15 +92,14 @@ public class ItemCsgoBox extends Item {
             }
         }
     }
-
     public static int[] getRandom(ItemStack stack) {
         BoxInfo info = getBoxInfo(stack);
         if (info != null && info.boxRandom != null && info.boxRandom.length > 0) {
             return info.boxRandom;
         }
-        return new int[]{40, 30, 20, 9, 1};
+        // 如果没有设置随机概率,返回默认值
+        return new int[]{40, 30, 20, 9, 1}; // 默认概率分布
     }
-
     public static Map<ItemStack, Integer> getItemGroup(ItemStack stack) {
         Map<ItemStack, Integer> itemsMap = new LinkedHashMap<>();
         BoxInfo info = getBoxInfo(stack);
@@ -139,7 +140,6 @@ public class ItemCsgoBox extends Item {
         }
     }
 
-    // BoxInfo 内部类保持不变
     public static class BoxInfo {
         @SerializedName("name") public String boxName = "";
         @SerializedName("key") public String boxKey = "";

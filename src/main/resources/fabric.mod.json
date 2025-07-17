@@ -19,7 +19,7 @@
       "com.XHxinhe.withdrawals.Withdrawals"
     ],
     "client": [
-      "com.XHxinhe.withdrawals.withdrawalsClient"
+      "com.XHxinhe.withdrawals.Withdrawals"
     ],
     "cardinal-components": [
       "com.XHxinhe.withdrawals.component.ModComponents"

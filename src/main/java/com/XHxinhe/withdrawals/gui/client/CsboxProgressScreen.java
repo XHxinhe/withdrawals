@@ -5,19 +5,17 @@ import com.XHxinhe.withdrawals.component.ModComponents;
 import com.XHxinhe.withdrawals.item.ItemCsgoBox;
 import com.XHxinhe.withdrawals.packet.ModPackets;
 import com.XHxinhe.withdrawals.packet.PacketGiveItem;
-import com.XHxinhe.withdrawals.gui.CsboxScreenHandler; // 新增导入
+import com.XHxinhe.withdrawals.screen.CsboxScreenHandler; // 确保这个类存在
 import com.XHxinhe.withdrawals.sounds.ModSounds;
 import com.XHxinhe.withdrawals.util.*;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ingame.ScreenHandlerProvider; // 新增导入
+import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
-import net.minecraft.screen.ScreenHandler;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.text.Text;
 import net.minecraft.util.Hand;
@@ -29,18 +27,7 @@ import java.security.SecureRandom;
 import java.util.*;
 
 @Environment(EnvType.CLIENT)
-public class CsboxProgressScreen extends Screen implements ScreenHandlerProvider<CsboxScreenHandler> {
-    // 新增字段和方法实现 ScreenHandlerProvider
-    private CsboxScreenHandler handler;
-
-    public void setHandler(CsboxScreenHandler handler) {
-        this.handler = handler;
-    }
-
-    @Override
-    public CsboxScreenHandler getScreenHandler() {
-        return handler;
-    }
+public class CsboxProgressScreen extends HandledScreen<CsboxScreenHandler> {
 
     private final World world;
     private final PlayerEntity entity;
@@ -48,66 +35,127 @@ public class CsboxProgressScreen extends Screen implements ScreenHandlerProvider
     public Map<ItemStack, Integer> itemList;
     private final List<ItemStack> itemInput = new ArrayList<>();
     private final List<Integer> gradeInput = new ArrayList<>();
-
     private long seed;
     private final SecureRandom seedBlender = new SecureRandom();
     private final List<Float> velocityExport;
-
     private float lastRenderWidth = 0F;
     private boolean startSwitch = true;
     private float velocityLerp = 0;
     private float soundWidthAdd = 0;
     private static final Random random = new Random();
     private final float randomWidth = 93.5F + random.nextFloat() * (111F - 93.5F);
-
     private int startTime = 0;
     private float startWidth;
     private float RenderWidthAdd = 0F;
     private List<Float> renderExport;
     private int openTime;
 
-    public CsboxProgressScreen() {
-        super(Text.literal("cs_progress"));
-        this.client = MinecraftClient.getInstance();
+    // 构造函数 - 移除了错误的代码
+    public CsboxProgressScreen(CsboxScreenHandler handler, PlayerInventory inventory, Text title) {
+        super(handler, inventory, Text.empty()); // 传入空标题，避免显示默认标题
+        this.entity = inventory.player;
+        this.world = entity.getWorld();
+        this.boxStack = this.entity.getStackInHand(Hand.MAIN_HAND);
 
-        // 确保client不为null
-        if (this.client != null) {
-            this.width = client.getWindow().getScaledWidth();
-            this.height = client.getWindow().getScaledHeight();
-
-            if (this.client.player != null) {
-                this.entity = this.client.player;
-                this.world = entity.getWorld();
-                this.boxStack = this.entity.getStackInHand(Hand.MAIN_HAND);
-
-                if (this.boxStack.getItem() instanceof ItemCsgoBox box) {
-                    this.itemList = box.getItemGroup(this.boxStack);
-                } else {
-                    this.itemList = new HashMap<>();
-                }
-            } else {
-                this.entity = null;
-                this.world = null;
-                this.boxStack = ItemStack.EMPTY;
-                this.itemList = new HashMap<>();
-            }
+        if (this.boxStack.getItem() instanceof ItemCsgoBox box) {
+            this.itemList = box.getItemGroup(this.boxStack);
         } else {
-            this.entity = null;
-            this.world = null;
-            this.boxStack = ItemStack.EMPTY;
             this.itemList = new HashMap<>();
         }
 
-        // 确保字段不为null
         if (this.itemList == null) this.itemList = new HashMap<>();
         this.velocityExport = renderCount();
+
+        // 将玩家物品栏标题移出屏幕，使其不可见
+        this.playerInventoryTitleY = 1000;
     }
 
     @Override
     protected void init() {
         super.init();
+        this.titleX = 1000; // 将主标题移出屏幕
         this.startWidth = this.width;
         BlurHandler.updateShaderState(true);
+    }
+
+    // 我们自己绘制所有东西，所以这个方法留空，避免绘制默认标题
+    @Override
+    protected void drawForeground(DrawContext context, int mouseX, int mouseY) {
+        // 不调用 super.drawForeground(...)
+    }
+
+    // 这个方法现在只负责绘制我们的自定义背景
+    @Override
+    protected void drawBackground(DrawContext context, float delta, int mouseX, int mouseY) {
+        // 绘制我们的自定义背景（模糊效果）
+        if (this.client != null && this.client.world != null) {
+            context.fillGradient(0, 0, this.width, this.height, BlurHandler.getBackgroundColor(), BlurHandler.getBackgroundColor());
+        }
+    }
+
+    @Override
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        // 1. 执行Tick逻辑
+        if (this.client != null && this.client.player != null) {
+            if (this.client.player.isAlive() && !this.client.player.isRemoved()) {
+                this.containerTick();
+            } else {
+                this.close();
+            }
+        } else {
+            this.close();
+            return; // 如果客户端为空，则提前返回
+        }
+
+        // 2. 绘制我们的自定义背景
+        this.drawBackground(context, delta, mouseX, mouseY);
+
+        // 3. 隐藏原版HUD
+        this.client.options.hudHidden = true;
+
+        // 4. 绘制动画
+        RenderSystem.setShaderColor(1, 1, 1, 1);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+
+        if (openTime >= 5 && !gradeInput.isEmpty() && !itemInput.isEmpty()) {
+            float widthNewAdd = RenderWidthAdd;
+            if (this.width != startWidth) {
+                widthNewAdd *= this.width / startWidth;
+            }
+
+            float progress = Math.min(1, delta + velocityLerp);
+
+            for (int i = 0; i < 50; i++) {
+                int grade = gradeInput.get(i);
+                ItemStack itemStack = itemInput.get(i);
+                IconListTools.renderItemProgress(
+                        this.entity, context, itemStack,
+                        this.width * randomWidth / 100F + i * this.width * 20F / 100F - MathHelper.lerp(progress, lastRenderWidth, widthNewAdd),
+                        this.height * 37F / 100F, this.width, this.height, grade
+                );
+            }
+
+            lastRenderWidth = widthNewAdd;
+
+            int goldLineTo = this.height * 37 / 100 + height * 25 / 100;
+            context.fill((int)(this.width / 2F), (int)(this.height * 37 / 100F), (int)(width / 2F + 2), goldLineTo + 2, ColorTools.argbColor(128, 255, 215, 0));
+        }
+
+        RenderSystem.disableBlend();
+
+        // 绘制覆盖的纹理
+        RenderSystem.enableBlend();
+        context.drawTexture(new Identifier("withdrawals", "textures/screens/csgo_background.png"), 0, 0, 0, 0, this.width, this.height, this.width, this.height);
+        RenderSystem.disableBlend();
+
+        // 5. 调用 super.render() 来绘制物品栏格子和工具提示
+        // 注意：我们已经通过重写 drawBackground 和 drawForeground 禁用了背景和标题的绘制
+        // 所以这里的 super.render() 只会绘制物品栏本身和处理鼠标悬停。
+//        super.render(context, mouseX, mouseY, delta);
+
+        // 6. 绘制工具提示（这确保了悬停在物品上时能看到信息）
+        this.drawMouseoverTooltip(context, mouseX, mouseY);
     }
 
     public void renderGradeItems() {
@@ -115,75 +163,15 @@ public class CsboxProgressScreen extends Screen implements ScreenHandlerProvider
         seed = seedBlender.nextLong();
         Random rng = new Random(seed);
 
+        // 清空旧数据
+        gradeInput.clear();
+        itemInput.clear();
+
         for (int i = 0; i < 50; i++) {
             int grade = RandomItem.randomItemsGrade(rng, ItemCsgoBox.getRandom(boxStack), this.entity);
             ItemStack itemStack = RandomItem.randomItems(rng, grade, this.itemList);
             gradeInput.add(grade);
             itemInput.add(itemStack);
-        }
-    }
-
-    @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        if (this.client != null && this.client.world != null) {
-            context.fillGradient(0, 0, this.width, this.height, BlurHandler.getBackgroundColor(), BlurHandler.getBackgroundColor());
-        } else {
-            this.renderBackground(context);
-        }
-
-        renderBg(context, delta, mouseX, mouseY);
-        super.render(context, mouseX, mouseY, delta);
-    }
-
-    protected void renderBg(DrawContext context, float partialTicks, int gx, int gy) {
-        RenderSystem.setShaderColor(1, 1, 1, 1);
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-
-        if (this.client != null) {
-            this.client.options.hudHidden = true;
-        }
-
-        if (openTime < 5) {
-            return;
-        }
-
-        float widthNewAdd = RenderWidthAdd;
-        if (this.width != startWidth) {
-            widthNewAdd *= this.width / startWidth;
-        }
-
-        float progress = Math.min(1, partialTicks + velocityLerp);
-
-        for (int i = 0; i < 50; i++) {
-            int grade = gradeInput.get(i);
-            ItemStack itemStack = itemInput.get(i);
-            IconListTools.renderItemProgress(this.entity, context, itemStack, this.width * randomWidth / 100F + i * this.width * 20F / 100F - MathHelper.lerp(progress, lastRenderWidth, widthNewAdd), this.height * 37F / 100F, this.width, this.height, grade);
-        }
-
-        lastRenderWidth = widthNewAdd;
-
-        int goldLineTo = this.height * 37 / 100 + height * 25 / 100;
-        context.fill((int)(this.width / 2F), (int)(this.height * 37 / 100F), (int)(width / 2F + 2), goldLineTo + 2, ColorTools.argbColor(128, 255, 215, 0));
-        RenderSystem.disableBlend();
-
-        RenderSystem.enableBlend();
-        context.drawTexture(new Identifier("withdrawals", "textures/screens/csgo_background.png"), 0, 0, 0, 0, this.width, this.height, this.width, this.height);
-        RenderSystem.disableBlend();
-    }
-
-    @Override
-    public void tick() {
-        super.tick();
-        if (this.client == null || this.client.player == null) {
-            this.close();
-            return;
-        }
-
-        if (this.client.player.isAlive() && !this.client.player.isRemoved()) {
-            this.containerTick();
-        } else {
-            this.close();
         }
     }
 
@@ -202,10 +190,13 @@ public class CsboxProgressScreen extends Screen implements ScreenHandlerProvider
 
             ClientPlayNetworking.send(ModPackets.GIVE_ITEM_ID, new PacketGiveItem(seed).toBuf());
 
-            ModComponents.CSBOX_COMPONENT.maybeGet(this.entity).ifPresent(csbox -> {
-                csbox.setItem(itemInput.get(45));
-                csbox.setGrade(gradeInput.get(45));
-            });
+            // 确保列表不为空
+            if (itemInput.size() > 45 && gradeInput.size() > 45) {
+                ModComponents.CSBOX_COMPONENT.maybeGet(this.entity).ifPresent(csbox -> {
+                    csbox.setItem(itemInput.get(45));
+                    csbox.setGrade(gradeInput.get(45));
+                });
+            }
         }
 
         if (openTime < 5) {
@@ -262,12 +253,11 @@ public class CsboxProgressScreen extends Screen implements ScreenHandlerProvider
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (super.keyPressed(keyCode, scanCode, modifiers)) return true;
         if (keyCode == 256) { // ESC key
             this.close();
             return true;
         }
-        return false;
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
@@ -275,9 +265,6 @@ public class CsboxProgressScreen extends Screen implements ScreenHandlerProvider
         BlurHandler.updateShaderState(false);
         if (this.client != null) {
             this.client.options.hudHidden = false;
-            if (this.client.player != null) {
-                this.client.player.closeHandledScreen();
-            }
         }
         super.close();
     }
