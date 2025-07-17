@@ -30,8 +30,8 @@ public class CsgoBoxCraftScreen extends HandledScreen<CsgoBoxCraftScreenHandler>
     public CsgoBoxCraftScreen(CsgoBoxCraftScreenHandler handler, PlayerInventory inventory, Text title) {
         super(handler, inventory, title);
         // 调整背景尺寸以匹配贴图和槽位布局
-        this.backgroundWidth = 176 ; // 176 -> 212
-        this.backgroundHeight = 166 ; // 166 -> 240
+        this.backgroundWidth = 176 + 36; // 176 -> 212
+        this.backgroundHeight = 166 + 74; // 166 -> 240
     }
 
     @Override

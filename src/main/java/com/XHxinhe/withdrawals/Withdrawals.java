@@ -1,18 +1,13 @@
 package com.XHxinhe.withdrawals;
 
 import com.XHxinhe.withdrawals.config.CsgoBoxManage;
-import com.XHxinhe.withdrawals.gui.client.CsboxProgressScreen;
 import com.XHxinhe.withdrawals.item.ModItems;
 import com.XHxinhe.withdrawals.packet.ModPackets;
-import com.XHxinhe.withdrawals.screen.CsboxScreenHandler;
-import com.XHxinhe.withdrawals.screen.ModScreenHandlers;
+import com.XHxinhe.withdrawals.gui.ModScreenHandlers;
 import com.XHxinhe.withdrawals.sounds.ModSounds;
-import com.XHxinhe.withdrawals.util.BlurHandler;
-import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.gui.screen.ingame.HandledScreens;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,17 +21,18 @@ import java.nio.file.Path;
 
 /**
  * Mod的主入口类 (Fabric版本)。
+ * 这个类只负责通用和服务器端的初始化。
  */
-public class Withdrawals implements ModInitializer, ClientModInitializer {
+public class Withdrawals implements ModInitializer {
 
-    public static final String MODID = "withdrawals";
+    public static final String MODID = "withdrawals"; // 变量名建议使用大写，符合Java规范
     public static final Logger LOGGER = LoggerFactory.getLogger(MODID);
-
 
     @Override
     public void onInitialize() {
         LOGGER.info("《提款》Mod 正在进行通用初始化...");
 
+        // 这些是通用或服务器端的内容
         ModItems.registerModItems();
         ModSounds.registerSounds();
         ModScreenHandlers.registerAllScreenHandlers();
@@ -49,17 +45,7 @@ public class Withdrawals implements ModInitializer, ClientModInitializer {
         });
     }
 
-    @Override
-    public void onInitializeClient() {
-        LOGGER.info("《提款》Mod 正在进行客户端初始化...");
-
-        // 注册GUI屏幕，使用正确的方式来实例化 CsboxProgressScreen
-        // CsboxProgressScreen::new 是 (handler, inventory, title) -> new CsboxProgressScreen(handler, inventory, title) 的简写
-        HandledScreens.register(ModScreenHandlers.CSGO_SCREEN_HANDLER, CsboxProgressScreen::new);
-
-        ModPackets.registerS2CPackets();
-        BlurHandler.register();
-    }
+    // onInitializeClient() 方法已从此类中移除
 
     private void createDefaultConfig() {
         try {
@@ -87,8 +73,7 @@ public class Withdrawals implements ModInitializer, ClientModInitializer {
                           "grade3": ["{\\"id\\":\\"minecraft:diamond_shovel\\",\\"Count\\":1,\\"tag\\":{\\"Damage\\":0}}", "{\\"id\\":\\"minecraft:diamond_pickaxe\\",\\"Count\\":1,\\"tag\\":{\\"Damage\\":0}}", "{\\"id\\":\\"minecraft:diamond_hoe\\",\\"Count\\":1,\\"tag\\":{\\"Damage\\":0}}"],
                           "grade4": ["{\\"id\\":\\"minecraft:diamond_axe\\",\\"Count\\":1,\\"tag\\":{\\"Damage\\":0}}", "{\\"id\\":\\"minecraft:diamond_sword\\",\\"Count\\":1,\\"tag\\":{\\"Damage\\":0}}"],
                           "grade5": ["{\\"id\\":\\"minecraft:netherite_sword\\",\\"Count\\":1,\\"tag\\":{\\"Damage\\":0}}", "{\\"id\\":\\"minecraft:netherite_axe\\",\\"Count\\":1,\\"tag\\":{\\"Damage\\":0}}", "{\\"id\\":\\"minecraft:netherite_pickaxe\\",\\"Count\\":1,\\"tag\\":{\\"Damage\\":0}}", "{\\"id\\":\\"minecraft:netherite_shovel\\",\\"Count\\":1,\\"tag\\":{\\"Damage\\":0}}", "{\\"id\\":\\"minecraft:netherite_hoe\\",\\"Count\\":1,\\"tag\\":{\\"Damage\\":0}}"]
-                        }
-                        """;
+                        }""";
                 try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(filePath.toFile()), StandardCharsets.UTF_8))) {
                     writer.write(content);
                 }

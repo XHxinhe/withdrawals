@@ -50,7 +50,7 @@ public class CsLookItemScreen extends Screen {
     @Override
     protected void init() {
         super.init();
-        BlurHandler.enable(true);
+        BlurHandler.updateShaderState(true);
 
         // 使用TexturedButtonWithText来添加带文字的返回按钮
         this.addDrawableChild(new TexturedButtonWithText(
@@ -185,7 +185,7 @@ public class CsLookItemScreen extends Screen {
     @Override
     public void close() {
         // [修正] 调用正确的方法名，并且在关闭时禁用模糊
-        BlurHandler.enable(false);
+        BlurHandler.updateShaderState(false);
         if (this.client != null) {
             this.client.options.hudHidden = false;
             if (this.client.player != null) {
