@@ -14,7 +14,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.screen.ingame.HandledScreens;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import com.XHxinhe.withdrawals.gui.CsgoBoxCraftScreen;
 import java.io.BufferedWriter;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -49,6 +49,7 @@ public class Withdrawals implements ModInitializer, ClientModInitializer {
 
         // 这行代码现在可以正常编译了
         HandledScreens.register(ModScreenHandlers.CSGO_SCREEN_HANDLER, CsboxProgressScreen::new);
+        HandledScreens.register(ModScreenHandlers.CSGO_BOX_CRAFT_SCREEN_HANDLER, CsgoBoxCraftScreen::new);
 
         ModPackets.registerS2CPackets();
         BlurHandler.register();
