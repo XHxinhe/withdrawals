@@ -1,5 +1,6 @@
 package com.XHxinhe.withdrawals.gui;
 
+import com.XHxinhe.withdrawals.screen.ModScreenHandlers;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventory;

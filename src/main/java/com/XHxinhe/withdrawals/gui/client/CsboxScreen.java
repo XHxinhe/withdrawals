@@ -1,34 +1,38 @@
 package com.XHxinhe.withdrawals.gui.client;
 
-import com.XHxinhe.withdrawals.gui.CsboxScreenHandler;
 import com.XHxinhe.withdrawals.gui.widget.TexturedButtonWithText;
+import com.XHxinhe.withdrawals.util.IconListTools;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.XHxinhe.withdrawals.item.ItemCsgoBox;
 import com.XHxinhe.withdrawals.packet.ModPackets;
 import com.XHxinhe.withdrawals.util.BlurHandler;
 import com.XHxinhe.withdrawals.util.GuiItemMove;
-import com.XHxinhe.withdrawals.util.IconListTools;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.entity.player.PlayerInventory;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.TexturedButtonWidget;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.registry.Registries;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.world.World;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 @Environment(EnvType.CLIENT)
-public class CsboxScreen extends HandledScreen<CsboxScreenHandler> {
+public class CsboxScreen extends Screen {
 
+    private final World world;
+    private final PlayerEntity entity;
     private final ItemStack itemMenu;
     private final Map<ItemStack, Integer> itemGroup;
     private final List<ItemStack> itemsList;
@@ -40,34 +44,47 @@ public class CsboxScreen extends HandledScreen<CsboxScreenHandler> {
     public float itemRotY;
     private int gameTick = 0;
 
-    public CsboxScreen(CsboxScreenHandler handler, PlayerInventory inventory, Text title) {
-        super(handler, inventory, title);
-        this.itemMenu = handler.boxStack;
+    public CsboxScreen(ItemStack stack) {
+        super(Text.literal("cs_screen"));
+        this.client = MinecraftClient.getInstance();
 
-        if (this.itemMenu.getItem() instanceof ItemCsgoBox) {
-            this.itemGroup = ItemCsgoBox.getItemGroup(this.itemMenu);
-            this.itemsList = itemsListProgress(this.itemGroup);
-            this.gradeList = gradeListProgress(this.itemGroup);
+        if (this.client != null && this.client.player != null) {
+            this.entity = this.client.player;
+            this.world = entity.getWorld();
+            this.itemMenu = stack;
 
-            String keyId = ItemCsgoBox.getKey(this.itemMenu);
-            if (keyId != null && !keyId.isEmpty()) {
-                Registries.ITEM.getOrEmpty(new Identifier(keyId))
-                        .ifPresent(item -> this.itemKey = new ItemStack(item));
+            if (this.itemMenu.getItem() instanceof ItemCsgoBox) {
+                this.itemGroup = ItemCsgoBox.getItemGroup(this.itemMenu);
+                this.itemsList = itemsListProgress(this.itemGroup);
+                this.gradeList = gradeListProgress(this.itemGroup);
+
+                String keyId = ItemCsgoBox.getKey(this.itemMenu);
+                if (keyId != null && !keyId.isEmpty()) {
+                    Registries.ITEM.getOrEmpty(new Identifier(keyId))
+                            .ifPresent(item -> this.itemKey = new ItemStack(item));
+                }
+            } else {
+                this.itemGroup = Map.of();
+                this.itemsList = List.of();
+                this.gradeList = List.of();
             }
         } else {
+            this.entity = null;
+            this.world = null;
+            this.itemMenu = ItemStack.EMPTY;
             this.itemGroup = Map.of();
             this.itemsList = List.of();
             this.gradeList = List.of();
         }
-        this.playerInventoryTitleY = -1000;
-        this.backgroundHeight = 220;
     }
 
     @Override
     protected void init() {
         super.init();
+        // 在GUI初始化时开启模糊效果
         BlurHandler.updateShaderState(true);
 
+        // 开箱按钮
         this.addDrawableChild(new TexturedButtonWithText(
                 this.width * 68 / 100, this.height * 94 / 100,
                 this.width * 4 / 100, this.height * 5 / 100,
@@ -80,51 +97,39 @@ public class CsboxScreen extends HandledScreen<CsboxScreenHandler> {
                 0.8f
         ));
 
+        // 返回按钮
         this.addDrawableChild(new TexturedButtonWithText(
                 this.width * 73 / 100, this.height * 94 / 100,
                 this.width * 4 / 100, this.height * 5 / 100,
                 0, 0, 64,
                 new Identifier("withdrawals", "textures/screens/atlas/back_box.png"),
                 82, 128,
-                button -> this.close(),
+                button -> closeScreen(),
                 Text.translatable("gui.withdrawals.csgo_box.back_box"),
                 this.textRenderer,
                 0.8f
         ));
     }
 
-    // =================================================================================
-    // |                             >>> 修改点在这里 <<<                               |
-    // =================================================================================
     private void openBox() {
-        if (this.client == null || this.client.player == null) return;
+        if (this.client == null || this.entity == null) return;
 
         String keyId = ItemCsgoBox.getKey(itemMenu);
         boolean needsKey = keyId != null && !keyId.isEmpty();
 
-        // 检查是否是箱子，并且满足钥匙条件（要么不需要钥匙，要么玩家有钥匙）
         if (itemMenu.getItem() instanceof ItemCsgoBox && (!needsKey || hasKey(keyId))) {
-            // 创建数据包
-            PacketByteBuf buf = PacketByteBufs.create();
-
-            // 将钥匙的ID（可能为空字符串""）写入数据包
-            // 这与服务器端的 readString() 相对应
-            buf.writeString(keyId);
-
-            // 发送数据包到服务器
-            ClientPlayNetworking.send(ModPackets.CSGO_PROGRESS_ID, buf);
-
-            // 可以在这里添加逻辑，比如禁用按钮防止重复点击，或者切换到抽奖动画屏幕
-            // this.client.setScreen(new CsboxProgressScreen( ... ));
+            this.client.setScreen(new CsboxProgressScreen());
+            if (needsKey) {
+                PacketByteBuf buf = PacketByteBufs.create();
+                buf.writeInt(2);
+                buf.writeString(keyId);
+                ClientPlayNetworking.send(ModPackets.CSGO_PROGRESS_ID, buf);
+            }
         }
     }
-    // =================================================================================
-    // |                             >>> 修改结束 <<<                                 |
-    // =================================================================================
 
     private boolean hasKey(String keyId) {
-        if (this.client == null || this.client.player == null) return false;
-        for (ItemStack stack : this.client.player.getInventory().main) {
+        for (ItemStack stack : this.entity.getInventory().main) {
             Identifier stackId = Registries.ITEM.getId(stack.getItem());
             if (stackId.toString().equals(keyId)) {
                 return true;
@@ -143,31 +148,23 @@ public class CsboxScreen extends HandledScreen<CsboxScreenHandler> {
 
         renderBg(context, delta, mouseX, mouseY);
         renderLabels(context, mouseX, mouseY);
-        super.render(context, mouseX, mouseY, delta);
-        drawMouseoverTooltip(context, mouseX, mouseY);
-    }
 
-    @Override
-    protected void drawBackground(DrawContext context, float delta, int mouseX, int mouseY) {
-        // We handle our own background
+        super.render(context, mouseX, mouseY, delta);
     }
 
     protected void renderBg(DrawContext context, float partialTicks, int gx, int gy) {
-        // ** 检查 client 和 client.player 是否为空，防止在退出游戏时崩溃 **
-        if (this.client == null || this.client.player == null) {
-            return;
-        }
-
         RenderSystem.enableBlend();
-        this.client.options.hudHidden = true;
+        if (this.client != null) this.client.options.hudHidden = true;
 
+        // 绘制分割线
         context.fill(this.width * 3 / 100, this.height * 53 / 100, this.width * 97 / 100, this.height * 53 / 100 + 1, 0xFFD3D3D3);
         context.fill(this.width * 25 / 100, this.height * 92 / 100, this.width * 75 / 100, this.height * 92 / 100 + 1, 0xFFD3D3D3);
 
+        // 渲染箱子物品（支持旋转）
         float scale = (width * 26F / 100F) / 16F;
-        // ** 修正: 使用 this.client.player 而不是 this.player **
-        GuiItemMove.renderItemInInventoryFollowsMouse(context, this.width * 50 / 100, this.height * 32 / 100, this.itemRotX, this.itemRotY, itemMenu, this.client.player, scale);
+        GuiItemMove.renderItemInInventoryFollowsMouse(context, this.width * 50 / 100, this.height * 32 / 100, this.itemRotX, this.itemRotY, itemMenu, this.entity, scale);
 
+        // 渲染物品列表
         int x = 0, y = 0;
         for (int i = 0; i < itemsList.size(); i++) {
             int py = 55, px = i;
@@ -176,26 +173,21 @@ public class CsboxScreen extends HandledScreen<CsboxScreenHandler> {
             int grade = gradeList.get(i);
             x = px; y = py;
             if (grade == 5) break;
-            // ** 修正: 使用 this.client.player 而不是 this.player **
-            IconListTools.renderItemFrame(this.client.player, context, itemStack1, this.width * 4 / 100 + px * this.width * 9 / 100, this.height * py / 100, this.width, this.height, grade);
+            IconListTools.renderItemFrame(this.entity, context, itemStack1, this.width * 4 / 100 + px * this.width * 9 / 100, this.height * py / 100, this.width, this.height, grade);
         }
         if (!gradeList.isEmpty() && gradeList.get(gradeList.size() - 1) == 5) {
-            // ** 修正: 使用 this.client.player 而不是 this.player **
-            IconListTools.renderItemFrame(this.client.player, context, ItemStack.EMPTY, this.width * 4 / 100 + x * this.width * 9 / 100, this.height * y / 100, this.width, this.height, 5);
+            IconListTools.renderItemFrame(this.entity, context, ItemStack.EMPTY, this.width * 4 / 100 + x * this.width * 9 / 100, this.height * y / 100, this.width, this.height, 5);
         }
 
+        // 渲染钥匙图标
         if (!itemKey.isEmpty()) {
-            // ** 修正: 使用 this.client.player 和 this.client.player.getWorld() **
-            IconListTools.renderGuiItem(this.client.player, this.client.player.getWorld(), context, itemKey, this.width * 25F / 100, this.height * 93F / 100, 1);
+            IconListTools.renderGuiItem(this.entity, this.world, context, itemKey, this.width * 25F / 100, this.height * 93F / 100, 1);
         }
 
         RenderSystem.disableBlend();
     }
 
-    @Override
-    protected void drawForeground(DrawContext context, int mouseX, int mouseY) {
-        // We use renderLabels for text, so this is empty
-    }
+    // --- UI布局优化部分 ---
 
     protected void renderLabels(DrawContext context, int mouseX, int mouseY) {
         Style boldStyle = Style.EMPTY.withBold(true);
@@ -206,30 +198,58 @@ public class CsboxScreen extends HandledScreen<CsboxScreenHandler> {
     }
 
     private void renderTitleSection(DrawContext context, Style boldStyle) {
+        // 主标题
         Style colorStyle = Style.EMPTY.withColor(0xFFFFFF00);
-        Text titleText = Text.translatable("gui.withdrawals.csgo_box.title").fillStyle(boldStyle).fillStyle(colorStyle);
-        renderText(context, titleText, middleOf(titleText.getString(), 1.5f), this.height * 5.9F / 100F, 1.5F);
+        Text titleText = Text.translatable("gui.withdrawals.csgo_box.title").fillStyle(boldStyle).fillStyle(colorStyle);;
+        renderText(
+                context,
+                titleText,
+                middleOf(titleText.getString(), 1),  // 已经是居中的
+                this.height * 5.9F / 100F,           // Y位置保持不变
+                1.5F                                   // 缩放保持不变
+        );
 
+        // 箱子标签 - 居中显示
         Text labelText = Text.translatable("gui.withdrawals.csgo_box.label_box");
         Text boxNameText = itemMenu.getName();
-        float labelWidth = this.textRenderer.getWidth(labelText) * 0.7F;
-        float boxNameWidth = this.textRenderer.getWidth(boxNameText) * 0.7F;
-        float totalWidth = labelWidth + boxNameWidth + 5;
-        float startX = (this.width - totalWidth) / 2;
-        renderText(context, labelText, startX, this.height * 13F / 100F, 0.7F);
-        renderText(context, boxNameText, startX + labelWidth + 5, this.height * 13F / 100F, 0.7F);
-    }
 
+        // 计算总宽度以实现整体居中
+        float labelWidth = this.textRenderer.getWidth(labelText) * 0.7F;  // 0.8是缩放因子
+        float boxNameWidth = this.textRenderer.getWidth(boxNameText) * 0.7F;
+        float totalWidth = labelWidth + boxNameWidth + 5; // 5是间距
+
+        float startX = (this.width - totalWidth) / 2;
+
+        // 渲染标签和箱子名称
+        renderText(
+                context,
+                labelText,
+                startX,                          // 新的X位置
+                this.height * 13F / 100F,        // Y位置保持不变
+                0.7F                            // 缩放保持不变
+        );
+
+        renderText(
+                context,
+                boxNameText,
+                startX + labelWidth + 5,         // 紧跟在标签后面
+                this.height * 13F / 100F,        // Y位置保持不变
+                0.7F                            // 缩放保持不变
+        );
+    }
     private void renderItemListSection(DrawContext context, Style boldStyle) {
+        // "包含以下物品" 标签
         renderText(context, Text.translatable("gui.withdrawals.csgo_box.label_items").fillStyle(boldStyle), this.width * 3F / 100F, this.height * 50.3F / 100F, 0.8F);
 
+        // 物品名称标签
         int lastRenderedPx = 0;
         int lastRenderedPy = 0;
         for (int i = 0; i < itemsList.size(); i++) {
             int py = 67, px = i;
             if (i > 9) { py = 85; px = i - 10; }
+
             int grade = gradeList.get(i);
-            if (grade > 4) {
+            if (grade > 4) { // 如果是金色物品，则不渲染名字，只记录位置
                 lastRenderedPx = px;
                 lastRenderedPy = py;
                 break;
@@ -239,6 +259,7 @@ public class CsboxScreen extends HandledScreen<CsboxScreenHandler> {
             lastRenderedPy = py;
         }
 
+        // "极其稀有的特殊物品" 标签
         if (!gradeList.isEmpty() && gradeList.get(gradeList.size() - 1) == 5) {
             renderText(context, Text.translatable("gui.withdrawals.csgo_box.label_gold"), this.width * 4F / 100 + lastRenderedPx * this.width * 9F / 100, this.height * lastRenderedPy / 100F, 0.6F);
         }
@@ -247,43 +268,62 @@ public class CsboxScreen extends HandledScreen<CsboxScreenHandler> {
     private void renderBottomSection(DrawContext context, Style boldStyle) {
         float iconX = this.width * 25F / 100F;
         float iconY = this.height * 93F / 100F;
-        float textX = iconX + 20;
-        float textY = iconY + 5;
 
+        // 文字位置 (图标宽度16 + 间距2-4像素)
+        float textX = iconX + 20;  // 或者用 this.width * 27F / 100F
+        float textY = iconY + 5;   // 图标中心对齐
+
+        // 钥匙数量或需求显示
         if (!itemKey.isEmpty()) {
+            // 钥匙图标已在其他地方渲染
             if (boxKeyCount > 0) {
-                renderText(context, Text.literal(" × " + boxKeyCount), textX - 5, textY, 0.8F);
+                // 有钥匙时显示数量
+                renderText(context, Text.literal(" × " + boxKeyCount), textX-5, textY, 0.8F);
             } else {
+                // 无钥匙时显示需求提示
                 String tip = "需要使用 1个 " + itemKey.getName().getString() + " 打开 ";
                 renderText(context, Text.literal(tip), textX, textY, 0.8F);
             }
         }
     }
 
+    private void renderKeyRequirement(DrawContext context) {
+        float yPos = this.height * 94F / 100F;
+        renderText(context, Text.translatable("gui.withdrawals.csgo_box.label_open"), this.width * 28F / 100F, yPos, 0.8F);
+        renderText(context, itemKey.getName(), this.width * 35F / 100F, yPos, 0.8F);
+        renderText(context, Text.translatable("gui.withdrawals.csgo_box.label_open_1"), this.width * 40F / 100F, yPos, 0.8F);
+    }
+
+    // --- 结束UI布局优化部分 ---
+
     @Override
-    public void handledScreenTick() {
-        super.handledScreenTick();
+    public void tick() {
+        super.tick();
         if (this.client == null || this.client.player == null) {
-            this.close();
+            closeScreen();
             return;
         }
 
         if (this.client.player.isAlive() && !this.client.player.isRemoved()) {
-            if (gameTick % 20 == 1) {
-                this.boxKeyCount = getKeyCount();
-            }
-            if (gameTick > 100000) gameTick = 0;
-            gameTick++;
+            this.containerTick();
         } else {
-            this.close();
+            closeScreen();
         }
+    }
+
+    public void containerTick() {
+        gameTick++;
+        if (gameTick % 20 == 1) {
+            this.boxKeyCount = getKeyCount();
+        }
+        if (gameTick > 100000) gameTick = 0;
     }
 
     private int getKeyCount() {
         String keyId = ItemCsgoBox.getKey(itemMenu);
-        if (keyId == null || keyId.isEmpty() || this.client == null || this.client.player == null) return 0;
+        if (keyId == null || keyId.isEmpty()) return 0;
         int count = 0;
-        for (ItemStack stack : this.client.player.getInventory().main) {
+        for (ItemStack stack : entity.getInventory().main) {
             Identifier stackId = Registries.ITEM.getId(stack.getItem());
             if (stackId.toString().equals(keyId)) {
                 count += stack.getCount();
@@ -303,7 +343,25 @@ public class CsboxScreen extends HandledScreen<CsboxScreenHandler> {
     }
 
     @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (super.keyPressed(keyCode, scanCode, modifiers)) return true;
+        if (keyCode == 256) { // ESC Key
+            closeScreen();
+            return true;
+        }
+        return false;
+    }
+
+    private void closeScreen() {
+        if (this.client != null && this.client.player != null) {
+            this.client.player.closeHandledScreen();
+        }
+        this.close();
+    }
+
+    @Override
     public void close() {
+        // 关闭时禁用模糊效果
         BlurHandler.updateShaderState(false);
         if (this.client != null) {
             this.client.options.hudHidden = false;
@@ -320,6 +378,9 @@ public class CsboxScreen extends HandledScreen<CsboxScreenHandler> {
         return (this.width - this.textRenderer.getWidth(text) * scale) * 0.5F;
     }
 
+    /**
+     * 使用DrawContext的矩阵变换渲染缩放文本
+     */
     private void renderText(DrawContext context, Text text, float px, float py, float scale) {
         context.getMatrices().push();
         context.getMatrices().translate(px, py, 0);

@@ -1,13 +1,20 @@
 package com.XHxinhe.withdrawals;
 
 import com.XHxinhe.withdrawals.config.CsgoBoxManage;
+import com.XHxinhe.withdrawals.gui.client.CsboxProgressScreen;
 import com.XHxinhe.withdrawals.item.ModItems;
 import com.XHxinhe.withdrawals.packet.ModPackets;
-import com.XHxinhe.withdrawals.gui.ModScreenHandlers;
+import com.XHxinhe.withdrawals.screen.CsboxScreenHandler;
+import com.XHxinhe.withdrawals.screen.ModScreenHandlers;
 import com.XHxinhe.withdrawals.sounds.ModSounds;
+import com.XHxinhe.withdrawals.util.BlurHandler;
+import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.gui.screen.ingame.HandledScreens;
+import net.minecraft.entity.player.PlayerInventory; // 新增：解决 'PlayerInventory' 无法解析
+import net.minecraft.text.Text; // 新增：解决 'Text' 无法解析
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,18 +28,16 @@ import java.nio.file.Path;
 
 /**
  * Mod的主入口类 (Fabric版本)。
- * 这个类只负责通用和服务器端的初始化。
  */
-public class Withdrawals implements ModInitializer {
+public class Withdrawals implements ModInitializer, ClientModInitializer {
 
-    public static final String MODID = "withdrawals"; // 变量名建议使用大写，符合Java规范
+    public static final String MODID = "withdrawals";
     public static final Logger LOGGER = LoggerFactory.getLogger(MODID);
 
     @Override
     public void onInitialize() {
         LOGGER.info("《提款》Mod 正在进行通用初始化...");
 
-        // 这些是通用或服务器端的内容
         ModItems.registerModItems();
         ModSounds.registerSounds();
         ModScreenHandlers.registerAllScreenHandlers();
@@ -45,7 +50,20 @@ public class Withdrawals implements ModInitializer {
         });
     }
 
-    // onInitializeClient() 方法已从此类中移除
+    @Override
+    public void onInitializeClient() {
+        LOGGER.info("《提款》Mod 正在进行客户端初始化...");
+
+        // 注册GUI屏幕，为lambda表达式的参数显式声明类型，解决所有编译问题。
+        HandledScreens.register(ModScreenHandlers.CSGO_SCREEN_HANDLER, (CsboxScreenHandler handler, PlayerInventory inventory, Text title) -> {
+            CsboxProgressScreen screen = new CsboxProgressScreen();
+            screen.setHandler(handler);
+            return screen;
+        });
+
+        ModPackets.registerS2CPackets();
+        BlurHandler.register();
+    }
 
     private void createDefaultConfig() {
         try {

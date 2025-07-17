@@ -5,7 +5,7 @@ import com.XHxinhe.withdrawals.component.ModComponents;
 import com.XHxinhe.withdrawals.item.ItemCsgoBox;
 import com.XHxinhe.withdrawals.packet.ModPackets;
 import com.XHxinhe.withdrawals.packet.PacketGiveItem;
-import com.XHxinhe.withdrawals.gui.CsboxScreenHandler; // 新增导入
+import com.XHxinhe.withdrawals.screen.CsboxScreenHandler; // 新增导入
 import com.XHxinhe.withdrawals.sounds.ModSounds;
 import com.XHxinhe.withdrawals.util.*;
 import net.fabricmc.api.EnvType;
