@@ -1,19 +1,19 @@
+// 文件路径: src/main/java/com/XHxinhe/withdrawals/gui/client/CsLookItemScreen.java
+
 package com.XHxinhe.withdrawals.gui.client;
 
-import com.XHxinhe.withdrawals.gui.widget.TexturedButtonWithText;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.XHxinhe.withdrawals.component.ModComponents;
+import com.XHxinhe.withdrawals.gui.widget.TexturedButtonWithText;
 import com.XHxinhe.withdrawals.sounds.ModSounds;
 import com.XHxinhe.withdrawals.util.BlurHandler;
 import com.XHxinhe.withdrawals.util.ColorTools;
 import com.XHxinhe.withdrawals.util.GuiItemMove;
-// 移除了对 RenderFontTool 的导入
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.TexturedButtonWidget;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Style;
@@ -33,6 +33,7 @@ public class CsLookItemScreen extends Screen {
 
     public float itemRotX;
     public float itemRotY;
+
 
     public CsLookItemScreen() {
         super(Text.literal("look_item"));
@@ -71,6 +72,7 @@ public class CsLookItemScreen extends Screen {
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         if (this.client != null && this.client.world != null) {
+            // 绘制带模糊效果的背景
             context.fillGradient(0, 0, this.width, this.height, BlurHandler.getBackgroundColor(), BlurHandler.getBackgroundColor());
         } else {
             this.renderBackground(context);
@@ -84,7 +86,6 @@ public class CsLookItemScreen extends Screen {
     protected void renderBg(DrawContext context, float partialTicks, int gx, int gy) {
         RenderSystem.setShaderColor(1, 1, 1, 1);
         RenderSystem.enableBlend();
-        // [修正] 移除了不必要的 BlurHandler.updateShader(false) 调用
         if (this.client != null) {
             this.client.options.hudHidden = true;
         }
@@ -95,10 +96,16 @@ public class CsLookItemScreen extends Screen {
 
         float scale = (width * 26F / 100F) / 16F;
 
+        // 绘制UI装饰线条
         context.fill(this.width * 25 / 100, this.height * 92 / 100, this.width * 75 / 100, this.height * 92 / 100 + 1, 0xFFD3D3D3);
         context.fill(this.width * 37 / 100, this.height * 16 / 100, this.width * 63 / 100, this.height * 16 / 100 + 2, ColorTools.colorItems(grade));
 
-        GuiItemMove.renderItemInInventoryFollowsMouse(context, this.width * 50 / 100, this.height * 50 / 100, this.itemRotX, this.itemRotY, openItem, this.entity, scale);
+        // 渲染可拖动的3D物品
+        int centerX = this.width / 2;
+        int centerY = this.height / 2;
+        int itemX = centerX - 8;  // 减去8(16/2)使物品居中
+        int itemY = centerY - 8;
+        GuiItemMove.renderItemInInventoryFollowsMouse(context, itemX, itemY, this.itemRotX, this.itemRotY, openItem, this.entity, scale);
         RenderSystem.disableBlend();
     }
 
@@ -107,21 +114,25 @@ public class CsLookItemScreen extends Screen {
             return;
         }
 
-        Text component = openItem.getName().copy().fillStyle(Style.EMPTY.withBold(true));
-        renderText(context, component, this.width * 45F / 100F, this.height * 5F / 100F, 1.8F);
+        // 渲染居中的、带缩放的标题和等级文本
+        Text titleText = openItem.getName().copy().fillStyle(Style.EMPTY.withBold(true));
+        renderCenteredText(context, titleText, this.width / 2.0f, this.height * 4F / 100F, 1.8F);
 
-        renderText(context, Text.translatable("gui.withdrawals.csgo_box.grade" + grade), this.width * 45F / 100F, this.height * 11F / 100F, 1F);
-        renderText(context, Text.translatable("gui.withdrawals.csgo_box.back_box").copy().fillStyle(Style.EMPTY.withBold(true)), (float) this.width * 72.5F / 100F, (float) this.height * 95 / 100, 0.8F);
+        Text gradeText = Text.translatable("gui.withdrawals.csgo_box.grade" + grade);
+        renderCenteredText(context, gradeText, this.width / 2.0f, this.height * 11F / 100F, 1.0F);
     }
 
-    /**
-     * [修正] 使用 DrawContext 的矩阵变换来渲染缩放文本，移除了对 RenderFontTool 的依赖。
-     */
-    private void renderText(DrawContext context, Text text, float px, float py, float scale) {
+    private void renderCenteredText(DrawContext context, Text text, float centerX, float y, float scale) {
+        if (scale == 1.0F) {
+            context.drawTextWithShadow(this.textRenderer, text, (int) (centerX - this.textRenderer.getWidth(text) / 2.0f), (int) y, 0xFFFFFFFF);
+            return;
+        }
+
         context.getMatrices().push();
-        context.getMatrices().translate(px, py, 0);
+        context.getMatrices().translate(centerX, y, 0);
         context.getMatrices().scale(scale, scale, 1.0F);
-        context.drawText(this.textRenderer, text, 0, 0, 0xFFFFFFFF, false);
+        float scaledX = -this.textRenderer.getWidth(text) / 2.0f;
+        context.drawText(this.textRenderer, text, (int) scaledX, 0, 0xFFFFFFFF, true);
         context.getMatrices().pop();
     }
 
@@ -159,7 +170,9 @@ public class CsLookItemScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double pMouseX, double pMouseY, int pButton, double pDragX, double pDragY) {
-        boolean isInRange = (pMouseX >= this.width * 37F / 100 && pMouseX <= this.width * 37F / 100 + 200) && (pMouseY >= this.height * 12F / 100 && pMouseY <= this.height * 12F / 100 + 176);
+        boolean isInRange = (pMouseX >= this.width * 30F / 100 && pMouseX <= this.width * 70F / 100) &&
+                (pMouseY >= this.height * 20F / 100 && pMouseY <= this.height * 80F / 100);
+
         if (pButton == 0 && isInRange) {
             this.itemRotX = GuiItemMove.renderRotAngleX(pDragX, this.itemRotX);
             this.itemRotY = GuiItemMove.renderRotAngleY(pDragY, this.itemRotY);
@@ -172,19 +185,18 @@ public class CsLookItemScreen extends Screen {
         if (super.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         }
-        if (keyCode == 256) { // ESC Key
+
+        // [已修正] 直接检查ESC键的keyCode
+        if (keyCode == 256) {
             this.close();
             return true;
         }
+
         return false;
     }
 
-    // [修正] 移除单独的 closeScreen 方法，统一使用 close()
-    // private void closeScreen() { ... }
-
     @Override
     public void close() {
-        // [修正] 调用正确的方法名，并且在关闭时禁用模糊
         BlurHandler.updateShaderState(false);
         if (this.client != null) {
             this.client.options.hudHidden = false;

@@ -49,6 +49,7 @@ public class GuiItemMove {
         matrixStack.multiply(RotationAxis.POSITIVE_Y.rotation(angleXComponent));
         matrixStack.multiply(RotationAxis.POSITIVE_X.rotation(angleYComponent));
 
+        int light = 15728880;
         // 设置光照
         DiffuseLighting.enableGuiDepthLighting();
 
@@ -57,7 +58,7 @@ public class GuiItemMove {
 
         // 渲染物品
         client.getItemRenderer().renderItem(item, ModelTransformationMode.GUI, false,
-                matrixStack, bufferSource, LightmapTextureManager.MAX_LIGHT_COORDINATE,
+                matrixStack, bufferSource, light,
                 OverlayTexture.DEFAULT_UV, bakedModel);
 
         // 结束渲染
