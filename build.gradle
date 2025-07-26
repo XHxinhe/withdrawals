@@ -1,0 +1,115 @@
+plugins {
+    id 'fabric-loom' version '1.6.10'
+    id 'maven-publish'
+}
+
+version = "1.0.0"
+group = "com.XHxinhe"
+
+base {
+    archivesName = "withdrawals"
+}
+
+repositories {
+    maven {
+        name = 'Fabric'
+        url = 'https://maven.fabricmc.net/'
+    }
+    maven {
+        name = 'Quilt'
+        url = 'https://maven.quiltmc.org/repository/release'
+    }
+    mavenCentral()
+}
+
+loom {
+    runs {
+        datagen {
+            inherit client
+            name "Data Generation"
+            vmArg "-Dfabric-api.datagen"
+            vmArg "-Dfabric-api.datagen.output-dir=${file("src/main/generated")}"
+            vmArg "-Dfabric-api.datagen.modid=withdrawals"
+            runDir "build/datagen"
+        }
+    }
+}
+
+// 添加生成的资源目录
+sourceSets {
+    main {
+        resources {
+            srcDirs += [
+                    'src/main/generated'
+            ]
+        }
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:1.20.1"
+    mappings "net.fabricmc:yarn:1.20.1+build.10:v2"
+    modImplementation "net.fabricmc:fabric-loader:0.15.7"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:0.92.0+1.20.1"
+
+    modImplementation files(
+            "libs/customportalapi-0.0.1-beta65-1.20-85ab7cea64f68264.jar",
+            "libs/AliveAndWell-mc1.20.1-fabric-5.1.0.jar",
+            "libs/cardinal-components-base-5.2.2.jar",
+            "libs/cardinal-components-block-5.2.2.jar",
+            "libs/cardinal-components-chunk-5.2.2.jar",
+            "libs/cardinal-components-entity-5.2.2.jar",
+            "libs/cardinal-components-item-5.2.2.jar",
+            "libs/cardinal-components-level-5.2.2.jar",
+            "libs/cardinal-components-scoreboard-5.2.2.jar",
+            "libs/cardinal-components-world-5.2.2.jar",
+    )
+    include files(
+            "libs/cardinal-components-base-5.2.2.jar",
+            "libs/cardinal-components-block-5.2.2.jar",
+            "libs/cardinal-components-chunk-5.2.2.jar",
+            "libs/cardinal-components-entity-5.2.2.jar",
+            "libs/cardinal-components-item-5.2.2.jar",
+            "libs/cardinal-components-level-5.2.2.jar",
+            "libs/cardinal-components-scoreboard-5.2.2.jar",
+            "libs/cardinal-components-world-5.2.2.jar"
+    )
+}
+
+processResources {
+    inputs.property "version", project.version
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = "UTF-8"
+    it.options.release = 17
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+
+    withSourcesJar()
+}
+
+jar {
+    from("LICENSE") {
+        rename { "${it}_${project.archivesBaseName}"}
+    }
+}
+
+// 配置发布
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        // 添加仓库
+    }
+}

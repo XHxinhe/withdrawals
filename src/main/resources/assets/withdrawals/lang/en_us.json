@@ -1,0 +1,36 @@
+{
+
+  "itemGroup.withdrawals.cs_tab": "CSGO BOX",
+
+
+  "item.withdrawals.csgo_key0": "Iron Key",
+  "item.withdrawals.csgo_key1": "Gold Key",
+  "item.withdrawals.csgo_key2": "Diamond Key",
+  "item.withdrawals.csgo_key3": "Nether Key",
+  "item.withdrawals.csgo_box": "Treasure Box",
+  "item.withdrawals.csgo_box_craft": "Box Making Tool",
+
+  "gui.withdrawals.csgo_box.label_open": "Requires a ",
+  "gui.withdrawals.csgo_box.label_open_1": " to open",
+  "gui.withdrawals.csgo_box.label_gold": "\u2605 Legendary \u2605",
+  "gui.withdrawals.csgo_box.label_box": "Unlock",
+  "tooltip.withdrawals.item.cs_box.contains": "这个箱子里可能有以下物品",
+  "gui.withdrawals.csgo_box.label_items": "这个箱子里可能有以下物品",
+  "gui.withdrawals.csgo_box.title": "Unlock Container",
+  "gui.withdrawals.csgo_box.open_box": "Unlock",
+  "gui.withdrawals.csgo_box.back_box": "Close",
+  "gui.withdrawals.csgo_box.grade1": "Mil-spec, High grade",
+  "gui.withdrawals.csgo_box.grade2": "Restricted, Remarkable",
+  "gui.withdrawals.csgo_box.grade3": "Classified, Exotic",
+  "gui.withdrawals.csgo_box.grade4": "Covert, Extraordinary",
+  "gui.withdrawals.csgo_box.grade5": "Legendary",
+  "gui.withdrawals.csgo_box_craft.box_name": "输入箱子名称",
+  "gui.withdrawals.csgo_box_craft.button_down": "生成",
+  "gui.withdrawals.csgo_box_craft.success": "成功创建或更新箱子: %s",
+  "gui.withdrawals.csgo_box_craft.fail": "创建箱子失败，请检查日志！",
+  "tooltips.withdrawals.item.cs_box": "The box may contain the following items:",
+  "itemGroup.withdrawals.csgo_tab": "危险落幕"
+}
+
+
+

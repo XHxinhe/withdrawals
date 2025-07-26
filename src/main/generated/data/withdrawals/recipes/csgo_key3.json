@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "D": {
+      "item": "minecraft:diamond_block"
+    },
+    "E": {
+      "item": "minecraft:emerald_block"
+    },
+    "N": {
+      "item": "minecraft:netherite_block"
+    }
+  },
+  "pattern": [
+    "NEN",
+    "EDE",
+    "NEN"
+  ],
+  "result": {
+    "item": "withdrawals:csgo_key3"
+  },
+  "show_notification": true
+}

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "id": "withdrawals",
+  "version": "${version}",
+  "name": "Withdrawals",
+  "description": "CSGO-like box opening mod.",
+  "authors": [
+    "XHxinhe"
+  ],
+  "contact": {
+    "homepage": "",
+    "sources": "https://github.com/XHxinhe/withdrawals1"
+  },
+  "license": "MIT",
+  "icon": "assets/withdrawals/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.XHxinhe.withdrawals.Withdrawals"
+    ],
+    "client": [
+      "com.XHxinhe.withdrawals.Withdrawals"
+    ],
+    "cardinal-components": [
+      "com.XHxinhe.withdrawals.component.ModComponents"
+    ],
+    "fabric-datagen": [
+      "com.XHxinhe.withdrawals.datagen.ModDataGenerator"
+    ]
+  },
+  "mixins": [
+    "withdrawals.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.14.21",
+    "minecraft": "~1.20.1",
+    "java": ">=17",
+    "fabric-api": "*",
+    "cardinal-components-base": "*"
+  },
+  "custom": {
+    "cardinal-components": [
+      "withdrawals:csbox"
+    ]
+  }
+}

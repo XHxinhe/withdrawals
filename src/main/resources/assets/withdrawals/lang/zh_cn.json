@@ -1,0 +1,35 @@
+{
+
+  "itemGroup.withdrawals.cs_tab": "CSGO箱子",
+
+
+  "item.withdrawals.csgo_key0": "普通钥匙",
+  "item.withdrawals.csgo_key1": "黄金钥匙",
+  "item.withdrawals.csgo_key2": "钻石钥匙",
+  "item.withdrawals.csgo_key3": "下界钥匙",
+  "item.withdrawals.csgo_box": "普通宝箱",
+  "item.withdrawals.csgo_box_craft": "箱子制作工具",
+
+  "gui.withdrawals.csgo_box.label_open": "需要使用 1个",
+  "gui.withdrawals.csgo_box.label_open_1": " 打开",
+  "gui.withdrawals.csgo_box.label_gold": "\u2605 传奇物品 \u2605",
+  "gui.withdrawals.csgo_box.label_box": "解锁",
+  "gui.withdrawals.csgo_box_craft.box_name": "输入箱子名称",
+  "gui.withdrawals.csgo_box_craft.button_down": "提交",
+
+  "gui.withdrawals.csgo_box.label_items": "这个箱子里可能有以下物品",
+  "gui.withdrawals.csgo_box.title": "开箱",
+  "gui.withdrawals.csgo_box.open_box": "开箱",
+  "gui.withdrawals.csgo_box.back_box": "关闭",
+  "gui.withdrawals.csgo_box.grade1": "军规级收藏品",
+  "gui.withdrawals.csgo_box.grade2": "受限级收藏品",
+  "gui.withdrawals.csgo_box.grade3": "保密级收藏品",
+  "gui.withdrawals.csgo_box.grade4": "隐秘级收藏品",
+  "gui.withdrawals.csgo_box.grade5": "传说级收藏品",
+
+  "tooltips.withdrawals.item.cs_box": "该箱子内可能有以下物品:"
+
+}
+
+
+
